@@ -1,5 +1,6 @@
 import Foundation
-import CoreData
+internal import CoreData
+import Combine
 
 @MainActor
 final class LibraryHolder: ObservableObject {

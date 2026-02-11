@@ -1,4 +1,5 @@
 import SwiftUI
+internal import CoreData
 
 @main
 struct Assignment4App: App {

@@ -1,5 +1,5 @@
 import SwiftUI
-import CoreData
+internal import CoreData
 
 struct MembersView: View {
     @EnvironmentObject var holder: LibraryHolder
