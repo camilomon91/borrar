@@ -6,6 +6,10 @@ import Combine
 final class LibraryHolder: ObservableObject {
     let context: NSManagedObjectContext
 
+    // MARK: - UI State
+    @Published var selectedCategory: Category? = nil
+    @Published var searchText: String = ""
+
     @Published var categories: [Category] = []
     @Published var books: [Book] = []
     @Published var members: [Member] = []
@@ -24,18 +28,11 @@ final class LibraryHolder: ObservableObject {
     }
 
     func refreshCategories() {
-        let request: NSFetchRequest<Category> = Category.fetchRequest()
-        request.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
-        categories = (try? context.fetch(request)) ?? []
+        categories = fetchCategories()
     }
 
     func refreshBooks() {
-        let request: NSFetchRequest<Book> = Book.fetchRequest()
-        request.sortDescriptors = [
-            NSSortDescriptor(key: "title", ascending: true),
-            NSSortDescriptor(key: "author", ascending: true)
-        ]
-        books = (try? context.fetch(request)) ?? []
+        books = fetchBooks()
     }
 
     func refreshMembers() {
@@ -50,6 +47,69 @@ final class LibraryHolder: ObservableObject {
         loans = (try? context.fetch(request)) ?? []
     }
 
+    // MARK: - Fetchers
+    func fetchCategories() -> [Category] {
+        do {
+            return try context.fetch(categoriesFetch())
+        } catch {
+            fatalError("Unresolved error \(error)")
+        }
+    }
+
+    func fetchBooks() -> [Book] {
+        do {
+            return try context.fetch(booksFetch())
+        } catch {
+            fatalError("Unresolved error \(error)")
+        }
+    }
+
+    // MARK: - Fetch Requests
+    func categoriesFetch() -> NSFetchRequest<Category> {
+        let request: NSFetchRequest<Category> = Category.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \Category.name, ascending: true)]
+        return request
+    }
+
+    func booksFetch() -> NSFetchRequest<Book> {
+        let request: NSFetchRequest<Book> = Book.fetchRequest()
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \Book.addedAt, ascending: false),
+            NSSortDescriptor(keyPath: \Book.title, ascending: true)
+        ]
+        request.predicate = booksPredicate()
+        return request
+    }
+
+    // MARK: - Predicates
+    private func booksPredicate() -> NSPredicate? {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var parts: [NSPredicate] = []
+
+        if let category = selectedCategory {
+            parts.append(NSPredicate(format: "category == %@", category))
+        }
+
+        if !trimmed.isEmpty {
+            parts.append(NSPredicate(format: "(title CONTAINS[cd] %@) OR (author CONTAINS[cd] %@)", trimmed, trimmed))
+        }
+
+        if parts.isEmpty { return nil }
+        if parts.count == 1 { return parts[0] }
+        return NSCompoundPredicate(andPredicateWithSubpredicates: parts)
+    }
+
+    // MARK: - Filter controls
+    func setCategory(_ category: Category?) {
+        selectedCategory = category
+        refreshBooks()
+    }
+
+    func setSearch(_ text: String) {
+        searchText = text
+        refreshBooks()
+    }
+
     func createCategory(name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -57,6 +117,14 @@ final class LibraryHolder: ObservableObject {
         let category = Category(context: context)
         category.id = UUID()
         category.name = trimmed
+        saveAndRefresh()
+    }
+
+    func deleteCategory(_ category: Category) {
+        if selectedCategory?.objectID == category.objectID {
+            selectedCategory = nil
+        }
+        context.delete(category)
         saveAndRefresh()
     }
 
