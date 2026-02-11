@@ -60,6 +60,19 @@ final class LibraryHolder: ObservableObject {
         saveAndRefresh()
     }
 
+    func updateCategory(category: Category, name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        category.name = trimmed
+        saveAndRefresh()
+    }
+
+    func deleteCategory(category: Category) {
+        context.delete(category)
+        saveAndRefresh()
+    }
+
     func createBook(title: String, author: String, isbn: String?, category: Category?) {
         let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanAuthor = author.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -30,33 +30,26 @@ struct BooksView: View {
     }
 
     var body: some View {
-        Group {
-            if holder.books.isEmpty {
-                ContentUnavailableView("No Books Yet", systemImage: "books.vertical")
+        List {
+            if filteredBooks.isEmpty {
+                Text("No books found")
+                    .foregroundStyle(.secondary)
             } else {
-                List {
-                    ForEach(filteredBooks, id: \.objectID) { book in
-                        Button {
-                            editingBook = book
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(book.title ?? "Untitled")
-                                    .font(.headline)
-                                Text("\(book.author ?? "Unknown") • \(book.category?.name ?? "No Category")")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-
-                                Text(book.isAvailable ? "Available" : "Unavailable")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(book.isAvailable ? .green : .red)
-                            }
+                ForEach(filteredBooks, id: \.objectID) { book in
+                    Button {
+                        editingBook = book
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(book.title ?? "Untitled")
+                            Text("Author: \(book.author ?? "Unknown")")
+                            Text("Category: \(book.category?.name ?? "None")")
+                            Text("Status: \(book.isAvailable ? "Available" : "Unavailable")")
                         }
                     }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            holder.deleteBook(book: filteredBooks[index])
-                        }
+                }
+                .onDelete { indexSet in
+                    for index in indexSet {
+                        holder.deleteBook(book: filteredBooks[index])
                     }
                 }
             }
@@ -179,4 +172,3 @@ private struct BookFormView: View {
         }
     }
 }
-
