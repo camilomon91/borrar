@@ -1,5 +1,5 @@
 import SwiftUI
-internal import CoreData
+import CoreData
 
 struct BooksView: View {
     @EnvironmentObject var holder: LibraryHolder
@@ -32,7 +32,7 @@ struct BooksView: View {
     var body: some View {
         Group {
             if holder.books.isEmpty {
-                ContentUnavailableView("No Books Yet", systemImage: "books.vertical", description: Text("Add your first book to start borrowing."))
+                ContentUnavailableView("No Books Yet", systemImage: "books.vertical")
             } else {
                 List {
                     ForEach(filteredBooks, id: \.objectID) { book in
@@ -80,10 +80,7 @@ struct BooksView: View {
                         .tag(Optional(category.objectID))
                 }
             }
-            .pickerStyle(.menu)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
+
         }
         .sheet(isPresented: $showingAddSheet) {
             BookFormView(mode: .add)
@@ -183,8 +180,3 @@ private struct BookFormView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        BooksView()
-    }
-}

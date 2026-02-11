@@ -1,5 +1,5 @@
 import Foundation
-internal import CoreData
+import CoreData
 import Combine
 
 @MainActor
