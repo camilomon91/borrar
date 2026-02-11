@@ -1,9 +1,34 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
-    <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
-        <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="24299" systemVersion="25C56" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="Book" representedClassName="Book" syncable="YES" codeGenerationType="class">
+        <attribute name="addedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="author" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isAvailable" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isbn" optional="YES" attributeType="String"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Category" inverseName="book" inverseEntity="Category"/>
+        <relationship name="loan" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Loan"/>
     </entity>
-    <elements>
-        <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
-    </elements>
+    <entity name="Category" representedClassName="Category" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="book" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Book" inverseName="category" inverseEntity="Book"/>
+    </entity>
+    <entity name="Loan" representedClassName="Loan" syncable="YES" codeGenerationType="class">
+        <attribute name="borrowedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dueAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="returnedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="status" optional="YES" attributeType="String"/>
+        <relationship name="book" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Book"/>
+        <relationship name="member" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Member"/>
+    </entity>
+    <entity name="Member" representedClassName="Member" syncable="YES" codeGenerationType="class">
+        <attribute name="email" optional="YES" attributeType="String"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="joinedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="loans" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Loan"/>
+    </entity>
 </model>
