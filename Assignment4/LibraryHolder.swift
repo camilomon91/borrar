@@ -16,6 +16,7 @@ final class LibraryHolder: ObservableObject {
     @Published var loans: [Loan] = []
 
     init(_ context: NSManagedObjectContext) {
+        seedIfNeeded(context)
         refreshAll(context)
     }
 
@@ -223,6 +224,57 @@ final class LibraryHolder: ObservableObject {
         loan.returnedAt = Date()
         loan.status = "Returned"
         loan.book?.isAvailable = true
+        saveContext(context)
+    }
+
+
+    // MARK: - Seed
+    private func seedIfNeeded(_ context: NSManagedObjectContext) {
+        let request = Category.fetchRequest()
+        request.fetchLimit = 1
+
+        let count = (try? context.count(for: request)) ?? 0
+        guard count == 0 else { return }
+
+        let fiction = Category(context: context)
+        fiction.id = UUID()
+        fiction.name = "Fiction"
+
+        let science = Category(context: context)
+        science.id = UUID()
+        science.name = "Science"
+
+        let history = Category(context: context)
+        history.id = UUID()
+        history.name = "History"
+
+        let b1 = Book(context: context)
+        b1.id = UUID()
+        b1.title = "The Swift Journey"
+        b1.author = "Ava Cole"
+        b1.isbn = "978-1-23456-001-0"
+        b1.addedAt = Date()
+        b1.isAvailable = true
+        b1.category = science
+
+        let b2 = Book(context: context)
+        b2.id = UUID()
+        b2.title = "City of Lanterns"
+        b2.author = "Leo Hart"
+        b2.isbn = "978-1-23456-002-7"
+        b2.addedAt = Date()
+        b2.isAvailable = true
+        b2.category = fiction
+
+        let b3 = Book(context: context)
+        b3.id = UUID()
+        b3.title = "Empire and Oceans"
+        b3.author = "Mila Stone"
+        b3.isbn = "978-1-23456-003-4"
+        b3.addedAt = Date()
+        b3.isAvailable = true
+        b3.category = history
+
         saveContext(context)
     }
 
