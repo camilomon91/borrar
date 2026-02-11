@@ -6,28 +6,24 @@ struct MembersView: View {
     @State private var showingAddMember = false
 
     var body: some View {
-        Group {
+        List {
             if holder.members.isEmpty {
-                ContentUnavailableView("No Members", systemImage: "person.2", description: Text("Add a member to begin creating loans."))
+                Text("No members yet")
+                    .foregroundStyle(.secondary)
             } else {
-                List {
-                    ForEach(holder.members, id: \.objectID) { member in
-                        NavigationLink {
-                            MemberDetailView(member: member)
-                        } label: {
-                            VStack(alignment: .leading) {
-                                Text(member.name ?? "Unnamed")
-                                    .font(.headline)
-                                Text(member.email ?? "No Email")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
+                ForEach(holder.members, id: \.objectID) { member in
+                    NavigationLink {
+                        MemberDetailView(member: member)
+                    } label: {
+                        VStack(alignment: .leading) {
+                            Text(member.name ?? "Unnamed")
+                            Text(member.email ?? "No Email")
                         }
                     }
-                    .onDelete { indexSet in
-                        for index in indexSet {
-                            holder.deleteMember(member: holder.members[index])
-                        }
+                }
+                .onDelete { indexSet in
+                    for index in indexSet {
+                        holder.deleteMember(member: holder.members[index])
                     }
                 }
             }
@@ -167,40 +163,24 @@ private struct BorrowBookView: View {
 
     private let dueOptions = [7, 14]
 
+    private var availableBooks: [Book] {
+        holder.books.filter { $0.isAvailable }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                if holder.books.isEmpty {
+                if availableBooks.isEmpty {
                     Text("No books in library yet.")
                         .foregroundStyle(.secondary)
                 } else {
                     Section("Select Book") {
-                        ForEach(holder.books, id: \.objectID) { book in
-                            let available = book.isAvailable
-                            Button {
-                                if available {
-                                    selectedBookID = book.objectID
-                                }
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(book.title ?? "Untitled")
-                                        Text(book.author ?? "Unknown")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if !available {
-                                        Text("Unavailable")
-                                            .font(.caption)
-                                            .foregroundStyle(.red)
-                                    } else if selectedBookID == book.objectID {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(.blue)
-                                    }
-                                }
+                        Picker("Book", selection: $selectedBookID) {
+                            Text("Select a book").tag(NSManagedObjectID?.none)
+                            ForEach(availableBooks, id: \.objectID) { book in
+                                Text(book.title ?? "Untitled")
+                                    .tag(Optional(book.objectID))
                             }
-                            .disabled(!available)
                         }
                     }
 
@@ -210,13 +190,17 @@ private struct BorrowBookView: View {
                                 Text("\(value) days").tag(value)
                             }
                         }
-                        .pickerStyle(.segmented)
                     }
                 }
 
                 if let message {
                     Text(message)
                         .foregroundStyle(.red)
+                }
+            }
+            .onAppear {
+                if selectedBookID == nil {
+                    selectedBookID = availableBooks.first?.objectID
                 }
             }
             .navigationTitle("Borrow Book")
@@ -256,13 +240,8 @@ private struct LoanSummaryRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(loan.book?.title ?? "Unknown Book")
-                .font(.headline)
             Text("Borrowed: \(loan.borrowedAt ?? .now, style: .date)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
             Text(loan.returnedAt == nil ? "Active" : "Returned")
-                .font(.caption)
-                .foregroundStyle(loan.returnedAt == nil ? .blue : .green)
         }
     }
 }

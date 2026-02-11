@@ -18,6 +18,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                CategoriesView()
+            }
+            .tabItem {
+                Label("Categories", systemImage: "folder")
+            }
+
+            NavigationStack {
                 LoansView()
             }
             .tabItem {

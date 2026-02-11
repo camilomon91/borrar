@@ -8,15 +8,14 @@ struct LoansView: View {
     }
 
     var body: some View {
-        Group {
+        List {
             if holder.loans.isEmpty {
-                ContentUnavailableView("No Loans", systemImage: "clock.badge.exclamationmark", description: Text("Borrowed books will appear here."))
+                Text("No loans yet")
+                    .foregroundStyle(.secondary)
             } else {
-                List {
-                    ForEach(sortedLoans, id: \.objectID) { loan in
-                        LoanRow(loan: loan) {
-                            holder.returnLoan(loan: loan)
-                        }
+                ForEach(sortedLoans, id: \.objectID) { loan in
+                    LoanRow(loan: loan) {
+                        holder.returnLoan(loan: loan)
                     }
                 }
             }
@@ -45,36 +44,15 @@ private struct LoanRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(loan.book?.title ?? "Unknown Book")
-                        .font(.headline)
-                    Text(loan.member?.name ?? "Unknown Member")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Text(isActive ? "Active" : "Returned")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(isActive ? Color.blue.opacity(0.2) : Color.green.opacity(0.2))
-                    .clipShape(Capsule())
-            }
+            Text(loan.book?.title ?? "Unknown Book")
+            Text("Member: \(loan.member?.name ?? "Unknown Member")")
+            Text("Status: \(isActive ? "Active" : "Returned")")
 
             Text("Borrowed: \(loan.borrowedAt ?? .now, style: .date)")
-                .font(.caption)
             Text("Due: \(loan.dueAt ?? .now, style: .date)")
-                .font(.caption)
-                .foregroundStyle(isOverdue ? .red : .secondary)
 
             if isOverdue {
                 Text("Overdue")
-                    .font(.caption)
-                    .fontWeight(.bold)
                     .foregroundStyle(.red)
             }
 
@@ -82,13 +60,8 @@ private struct LoanRow: View {
                 Button("Return") {
                     onReturn()
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.indigo)
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 2)
-        .background(isOverdue ? Color.red.opacity(0.08) : Color.clear)
     }
 }
 
