@@ -3,6 +3,7 @@ import CoreData
 
 struct MembersView: View {
     @EnvironmentObject var holder: LibraryHolder
+    @Environment(\.managedObjectContext) private var context
     @State private var showingAddMember = false
 
     var body: some View {
@@ -26,7 +27,7 @@ struct MembersView: View {
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            holder.deleteMember(member: holder.members[index])
+                            holder.deleteMember(holder.members[index], context)
                         }
                     }
                 }
@@ -47,8 +48,8 @@ struct MembersView: View {
                 .environmentObject(holder)
         }
         .onAppear {
-            holder.refreshMembers()
-            holder.refreshLoans()
+            holder.refreshMembers(context)
+            holder.refreshLoans(context)
         }
     }
 }
@@ -56,6 +57,7 @@ struct MembersView: View {
 private struct AddMemberView: View {
     @EnvironmentObject var holder: LibraryHolder
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext) private var context
 
     @State private var name = ""
     @State private var email = ""
@@ -79,7 +81,7 @@ private struct AddMemberView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        holder.createMember(name: name, email: email)
+                        holder.createMember(name: name, email: email, context)
                         dismiss()
                     }
                     .disabled(!isValid)
@@ -91,6 +93,7 @@ private struct AddMemberView: View {
 
 private struct MemberDetailView: View {
     @EnvironmentObject var holder: LibraryHolder
+    @Environment(\.managedObjectContext) private var context
 
     let member: Member
     @State private var showingBorrow = false
@@ -149,8 +152,8 @@ private struct MemberDetailView: View {
                 .environmentObject(holder)
         }
         .onAppear {
-            holder.refreshLoans()
-            holder.refreshBooks()
+            holder.refreshLoans(context)
+            holder.refreshBooks(context)
         }
     }
 }
@@ -158,6 +161,7 @@ private struct MemberDetailView: View {
 private struct BorrowBookView: View {
     @EnvironmentObject var holder: LibraryHolder
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext) private var context
 
     let member: Member
 
@@ -241,7 +245,7 @@ private struct BorrowBookView: View {
             return
         }
 
-        let success = holder.borrowBook(member: member, book: book, dueDays: dueDays)
+        let success = holder.borrowBook(member: member, book: book, dueDays: dueDays, context)
         if success {
             dismiss()
         } else {

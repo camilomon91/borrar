@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LoansView: View {
     @EnvironmentObject var holder: LibraryHolder
+    @Environment(\.managedObjectContext) private var context
 
     private var sortedLoans: [Loan] {
         holder.loans.sorted { ($0.borrowedAt ?? .distantPast) > ($1.borrowedAt ?? .distantPast) }
@@ -15,7 +16,7 @@ struct LoansView: View {
                 List {
                     ForEach(sortedLoans, id: \.objectID) { loan in
                         LoanRow(loan: loan) {
-                            holder.returnLoan(loan: loan)
+                            holder.returnLoan(loan, context)
                         }
                     }
                 }
@@ -23,9 +24,9 @@ struct LoansView: View {
         }
         .navigationTitle("Loans")
         .onAppear {
-            holder.refreshLoans()
-            holder.refreshBooks()
-            holder.refreshMembers()
+            holder.refreshLoans(context)
+            holder.refreshBooks(context)
+            holder.refreshMembers(context)
         }
     }
 }

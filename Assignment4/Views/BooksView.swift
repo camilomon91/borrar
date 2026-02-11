@@ -3,31 +3,10 @@ import CoreData
 
 struct BooksView: View {
     @EnvironmentObject var holder: LibraryHolder
+    @Environment(\.managedObjectContext) private var context
 
-    @State private var searchText = ""
-    @State private var selectedCategoryID: NSManagedObjectID?
     @State private var showingAddSheet = false
     @State private var editingBook: Book?
-
-    private var filteredBooks: [Book] {
-        holder.books.filter { book in
-            let matchesCategory: Bool
-            if let selectedCategoryID {
-                matchesCategory = book.category?.objectID == selectedCategoryID
-            } else {
-                matchesCategory = true
-            }
-
-            if searchText.isEmpty {
-                return matchesCategory
-            }
-
-            let query = searchText.lowercased()
-            let title = (book.title ?? "").lowercased()
-            let author = (book.author ?? "").lowercased()
-            return matchesCategory && (title.contains(query) || author.contains(query))
-        }
-    }
 
     var body: some View {
         Group {
@@ -35,7 +14,7 @@ struct BooksView: View {
                 ContentUnavailableView("No Books Yet", systemImage: "books.vertical")
             } else {
                 List {
-                    ForEach(filteredBooks, id: \.objectID) { book in
+                    ForEach(holder.books, id: \.objectID) { book in
                         Button {
                             editingBook = book
                         } label: {
@@ -55,7 +34,7 @@ struct BooksView: View {
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            holder.deleteBook(book: filteredBooks[index])
+                            holder.deleteBook(holder.books[index], context)
                         }
                     }
                 }
@@ -71,9 +50,21 @@ struct BooksView: View {
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Search by title or author")
+        .searchable(text: Binding(
+            get: { holder.searchText },
+            set: { holder.setSearch($0, context) }
+        ), prompt: "Search by title or author")
         .safeAreaInset(edge: .top) {
-            Picker("Category", selection: $selectedCategoryID) {
+            Picker(
+                "Category",
+                selection: Binding(
+                    get: { holder.selectedCategory?.objectID },
+                    set: { newID in
+                        let category = holder.categories.first { $0.objectID == newID }
+                        holder.setCategory(category, context)
+                    }
+                )
+            ) {
                 Text("All").tag(NSManagedObjectID?.none)
                 ForEach(holder.categories, id: \.objectID) { category in
                     Text(category.name ?? "Unnamed")
@@ -91,8 +82,8 @@ struct BooksView: View {
                 .environmentObject(holder)
         }
         .onAppear {
-            holder.refreshBooks()
-            holder.refreshCategories()
+            holder.refreshBooks(context)
+            holder.refreshCategories(context)
         }
     }
 }
@@ -105,6 +96,7 @@ private struct BookFormView: View {
 
     @EnvironmentObject var holder: LibraryHolder
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.managedObjectContext) private var context
 
     let mode: Mode
 
@@ -173,10 +165,9 @@ private struct BookFormView: View {
 
         switch mode {
         case .add:
-            holder.createBook(title: title, author: author, isbn: isbn, category: category)
+            holder.createBook(title: title, author: author, isbn: isbn, category: category, context)
         case .edit(let book):
-            holder.updateBook(book: book, title: title, author: author, isbn: isbn, category: category)
+            holder.updateBook(book: book, title: title, author: author, isbn: isbn, category: category, context)
         }
     }
 }
-
