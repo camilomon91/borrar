@@ -8,7 +8,7 @@ struct Assignment4App: App {
 
     init() {
         let context = persistenceController.container.viewContext
-        _holder = StateObject(wrappedValue: LibraryHolder(context))
+        _holder = StateObject(wrappedValue: LibraryHolder(context: context))
     }
 
     var body: some Scene {

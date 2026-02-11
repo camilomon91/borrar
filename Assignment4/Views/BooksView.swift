@@ -3,15 +3,33 @@ import CoreData
 
 struct BooksView: View {
     @EnvironmentObject var holder: LibraryHolder
-    @Environment(\.managedObjectContext) private var context
 
     @State private var showingAddSheet = false
     @State private var editingBook: Book?
 
     var body: some View {
-        Group {
+        VStack(spacing: 8) {
+            Picker("Category", selection: Binding(
+                get: { holder.selectedCategory?.objectID },
+                set: { newID in
+                    let category = holder.categories.first { $0.objectID == newID }
+                    holder.setCategory(category)
+                }
+            )) {
+                Text("All").tag(NSManagedObjectID?.none)
+                ForEach(holder.categories, id: \.objectID) { category in
+                    Text(category.name ?? "Unnamed")
+                        .tag(Optional(category.objectID))
+                }
+            }
+            .pickerStyle(.menu)
+            .padding(.horizontal)
+
             if holder.books.isEmpty {
-                ContentUnavailableView("No Books Yet", systemImage: "books.vertical")
+                Text("No Books")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 40)
+                Spacer()
             } else {
                 List {
                     ForEach(holder.books, id: \.objectID) { book in
@@ -20,58 +38,35 @@ struct BooksView: View {
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(book.title ?? "Untitled")
-                                    .font(.headline)
                                 Text("\(book.author ?? "Unknown") • \(book.category?.name ?? "No Category")")
-                                    .font(.subheadline)
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
-
                                 Text(book.isAvailable ? "Available" : "Unavailable")
                                     .font(.caption)
-                                    .fontWeight(.semibold)
                                     .foregroundStyle(book.isAvailable ? .green : .red)
                             }
                         }
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            holder.deleteBook(holder.books[index], context)
+                            holder.deleteBook(book: holder.books[index])
                         }
                     }
                 }
+                .listStyle(.plain)
             }
         }
         .navigationTitle("Books")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showingAddSheet = true
-                } label: {
-                    Label("Add Book", systemImage: "plus")
-                }
-            }
-        }
         .searchable(text: Binding(
             get: { holder.searchText },
-            set: { holder.setSearch($0, context) }
-        ), prompt: "Search by title or author")
-        .safeAreaInset(edge: .top) {
-            Picker(
-                "Category",
-                selection: Binding(
-                    get: { holder.selectedCategory?.objectID },
-                    set: { newID in
-                        let category = holder.categories.first { $0.objectID == newID }
-                        holder.setCategory(category, context)
-                    }
-                )
-            ) {
-                Text("All").tag(NSManagedObjectID?.none)
-                ForEach(holder.categories, id: \.objectID) { category in
-                    Text(category.name ?? "Unnamed")
-                        .tag(Optional(category.objectID))
+            set: { holder.setSearch($0) }
+        ), prompt: "Search title or author")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Add") {
+                    showingAddSheet = true
                 }
             }
-
         }
         .sheet(isPresented: $showingAddSheet) {
             BookFormView(mode: .add)
@@ -82,8 +77,8 @@ struct BooksView: View {
                 .environmentObject(holder)
         }
         .onAppear {
-            holder.refreshBooks(context)
-            holder.refreshCategories(context)
+            holder.refreshCategories()
+            holder.refreshBooks()
         }
     }
 }
@@ -96,7 +91,6 @@ private struct BookFormView: View {
 
     @EnvironmentObject var holder: LibraryHolder
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.managedObjectContext) private var context
 
     let mode: Mode
 
@@ -113,19 +107,15 @@ private struct BookFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Info") {
-                    TextField("Title", text: $title)
-                    TextField("Author", text: $author)
-                    TextField("ISBN (optional)", text: $isbn)
-                }
+                TextField("Title", text: $title)
+                TextField("Author", text: $author)
+                TextField("ISBN", text: $isbn)
 
-                Section("Category") {
-                    Picker("Category", selection: $selectedCategoryID) {
-                        Text("None").tag(NSManagedObjectID?.none)
-                        ForEach(holder.categories, id: \.objectID) { category in
-                            Text(category.name ?? "Unnamed")
-                                .tag(Optional(category.objectID))
-                        }
+                Picker("Category", selection: $selectedCategoryID) {
+                    Text("None").tag(NSManagedObjectID?.none)
+                    ForEach(holder.categories, id: \.objectID) { category in
+                        Text(category.name ?? "Unnamed")
+                            .tag(Optional(category.objectID))
                     }
                 }
             }
@@ -165,9 +155,15 @@ private struct BookFormView: View {
 
         switch mode {
         case .add:
-            holder.createBook(title: title, author: author, isbn: isbn, category: category, context)
+            holder.createBook(title: title, author: author, isbn: isbn, category: category)
         case .edit(let book):
-            holder.updateBook(book: book, title: title, author: author, isbn: isbn, category: category, context)
+            holder.updateBook(book: book, title: title, author: author, isbn: isbn, category: category)
         }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        BooksView()
     }
 }

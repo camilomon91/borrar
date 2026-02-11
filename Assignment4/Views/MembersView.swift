@@ -3,13 +3,13 @@ import CoreData
 
 struct MembersView: View {
     @EnvironmentObject var holder: LibraryHolder
-    @Environment(\.managedObjectContext) private var context
     @State private var showingAddMember = false
 
     var body: some View {
         Group {
             if holder.members.isEmpty {
-                ContentUnavailableView("No Members", systemImage: "person.2", description: Text("Add a member to begin creating loans."))
+                Text("No Members")
+                    .foregroundStyle(.secondary)
             } else {
                 List {
                     ForEach(holder.members, id: \.objectID) { member in
@@ -18,28 +18,26 @@ struct MembersView: View {
                         } label: {
                             VStack(alignment: .leading) {
                                 Text(member.name ?? "Unnamed")
-                                    .font(.headline)
                                 Text(member.email ?? "No Email")
-                                    .font(.subheadline)
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
                         }
                     }
                     .onDelete { indexSet in
                         for index in indexSet {
-                            holder.deleteMember(holder.members[index], context)
+                            holder.deleteMember(member: holder.members[index])
                         }
                     }
                 }
+                .listStyle(.plain)
             }
         }
         .navigationTitle("Members")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
+                Button("Add") {
                     showingAddMember = true
-                } label: {
-                    Label("Add Member", systemImage: "plus")
                 }
             }
         }
@@ -48,8 +46,9 @@ struct MembersView: View {
                 .environmentObject(holder)
         }
         .onAppear {
-            holder.refreshMembers(context)
-            holder.refreshLoans(context)
+            holder.refreshMembers()
+            holder.refreshLoans()
+            holder.refreshBooks()
         }
     }
 }
@@ -57,22 +56,15 @@ struct MembersView: View {
 private struct AddMemberView: View {
     @EnvironmentObject var holder: LibraryHolder
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.managedObjectContext) private var context
 
     @State private var name = ""
     @State private var email = ""
-
-    private var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
 
     var body: some View {
         NavigationStack {
             Form {
                 TextField("Name", text: $name)
                 TextField("Email", text: $email)
-                    .keyboardType(.emailAddress)
-                    .textInputAutocapitalization(.never)
             }
             .navigationTitle("Add Member")
             .toolbar {
@@ -81,10 +73,10 @@ private struct AddMemberView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        holder.createMember(name: name, email: email, context)
+                        holder.createMember(name: name, email: email)
                         dismiss()
                     }
-                    .disabled(!isValid)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
         }
@@ -93,7 +85,6 @@ private struct AddMemberView: View {
 
 private struct MemberDetailView: View {
     @EnvironmentObject var holder: LibraryHolder
-    @Environment(\.managedObjectContext) private var context
 
     let member: Member
     @State private var showingBorrow = false
@@ -112,18 +103,13 @@ private struct MemberDetailView: View {
 
     var body: some View {
         List {
-            Section {
-                Text(member.email ?? "No email")
-                    .foregroundStyle(.secondary)
-            }
-
             Section("Active Loans") {
                 if activeLoans.isEmpty {
                     Text("No active loans")
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(activeLoans, id: \.objectID) { loan in
-                        LoanSummaryRow(loan: loan)
+                        Text(loan.book?.title ?? "Unknown Book")
                     }
                 }
             }
@@ -134,7 +120,7 @@ private struct MemberDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(pastLoans, id: \.objectID) { loan in
-                        LoanSummaryRow(loan: loan)
+                        Text(loan.book?.title ?? "Unknown Book")
                     }
                 }
             }
@@ -152,8 +138,8 @@ private struct MemberDetailView: View {
                 .environmentObject(holder)
         }
         .onAppear {
-            holder.refreshLoans(context)
-            holder.refreshBooks(context)
+            holder.refreshLoans()
+            holder.refreshBooks()
         }
     }
 }
@@ -161,7 +147,6 @@ private struct MemberDetailView: View {
 private struct BorrowBookView: View {
     @EnvironmentObject var holder: LibraryHolder
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.managedObjectContext) private var context
 
     let member: Member
 
@@ -169,53 +154,36 @@ private struct BorrowBookView: View {
     @State private var dueDays = 7
     @State private var message: String?
 
-    private let dueOptions = [7, 14]
-
     var body: some View {
         NavigationStack {
             Form {
-                if holder.books.isEmpty {
-                    Text("No books in library yet.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Section("Select Book") {
-                        ForEach(holder.books, id: \.objectID) { book in
-                            let available = book.isAvailable
-                            Button {
-                                if available {
-                                    selectedBookID = book.objectID
-                                }
-                            } label: {
-                                HStack {
-                                    VStack(alignment: .leading) {
-                                        Text(book.title ?? "Untitled")
-                                        Text(book.author ?? "Unknown")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if !available {
-                                        Text("Unavailable")
-                                            .font(.caption)
-                                            .foregroundStyle(.red)
-                                    } else if selectedBookID == book.objectID {
-                                        Image(systemName: "checkmark.circle.fill")
-                                            .foregroundStyle(.blue)
-                                    }
+                Section("Book") {
+                    ForEach(holder.books, id: \.objectID) { book in
+                        let available = book.isAvailable
+                        Button {
+                            if available { selectedBookID = book.objectID }
+                        } label: {
+                            HStack {
+                                Text(book.title ?? "Untitled")
+                                Spacer()
+                                if !available {
+                                    Text("Unavailable")
+                                        .foregroundStyle(.red)
+                                } else if selectedBookID == book.objectID {
+                                    Text("Selected")
                                 }
                             }
-                            .disabled(!available)
                         }
+                        .disabled(!available)
                     }
+                }
 
-                    Section("Due Date") {
-                        Picker("Loan Duration", selection: $dueDays) {
-                            ForEach(dueOptions, id: \.self) { value in
-                                Text("\(value) days").tag(value)
-                            }
-                        }
-                        .pickerStyle(.segmented)
+                Section("Due in") {
+                    Picker("Days", selection: $dueDays) {
+                        Text("7").tag(7)
+                        Text("14").tag(14)
                     }
+                    .pickerStyle(.segmented)
                 }
 
                 if let message {
@@ -241,32 +209,15 @@ private struct BorrowBookView: View {
     private func confirmBorrow() {
         guard let selectedBookID,
               let book = holder.books.first(where: { $0.objectID == selectedBookID }) else {
-            message = "Please select an available book."
+            message = "Select an available book."
             return
         }
 
-        let success = holder.borrowBook(member: member, book: book, dueDays: dueDays, context)
+        let success = holder.borrowBook(member: member, book: book, dueDays: dueDays)
         if success {
             dismiss()
         } else {
-            message = "That book is no longer available."
-        }
-    }
-}
-
-private struct LoanSummaryRow: View {
-    let loan: Loan
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(loan.book?.title ?? "Unknown Book")
-                .font(.headline)
-            Text("Borrowed: \(loan.borrowedAt ?? .now, style: .date)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(loan.returnedAt == nil ? "Active" : "Returned")
-                .font(.caption)
-                .foregroundStyle(loan.returnedAt == nil ? .blue : .green)
+            message = "Book is unavailable."
         }
     }
 }
